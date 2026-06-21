@@ -1,0 +1,8 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+ubay_cashback.db
+generated_barcodes/
+*.log
