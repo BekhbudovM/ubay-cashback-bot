@@ -21,7 +21,16 @@ async def ensure_regos_card(user: User) -> None:
     try:
         customer_id = user.regos_customer_id
         if not customer_id:
-            customer_id = await regos_client.create_customer(user.full_name, user.phone)
+            try:
+                customer_id = await regos_client.create_customer(user.full_name, user.phone)
+            except RegosError as e:
+                if e.error_code == 1165:  # phone already in use: reuse existing customer
+                    customer_id = await regos_client.find_customer_by_phone(user.phone)
+                    if not customer_id:
+                        logger.error("Phone in use but customer not found for user %s", user.id)
+                        return
+                else:
+                    raise
         card_id = await regos_client.create_card(int(customer_id), user.barcode_value)
     except RegosError as e:
         logger.error("REGOS card creation failed for user %s: %s", user.id, e)

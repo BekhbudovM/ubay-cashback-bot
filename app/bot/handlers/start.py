@@ -64,6 +64,9 @@ async def phone_text_handler(message: Message):
 
 @router.message(RegisterState.waiting_for_name)
 async def name_handler(message: Message, state: FSMContext):
+    if not message.text:
+        await message.answer("Iltimos, ism-familyangizni matn ko'rinishida yozing.")
+        return
     full_name = message.text.strip()
 
     if len(full_name) < 2:

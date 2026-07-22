@@ -53,6 +53,17 @@ class RegosClient:
         })
         return result["new_id"]
 
+    async def find_customer_by_phone(self, phone: str):
+        """Find an existing REGOS customer whose main_phone matches the given phone."""
+        digits = "".join(ch for ch in phone if ch.isdigit())
+        result = await self._post("retailcustomer/get", {})
+        customers = result if isinstance(result, list) else []
+        for c in customers:
+            c_phone = "".join(ch for ch in (c.get("main_phone") or "") if ch.isdigit())
+            if c_phone and (c_phone == digits or c_phone[-9:] == digits[-9:]):
+                return c["id"]
+        return None
+
     async def create_card(self, customer_id: int, barcode_value: str) -> int:
         result = await self._post("retailcard/add", {
             "group_id": settings.regos_card_group_id,
