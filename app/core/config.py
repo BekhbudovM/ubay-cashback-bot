@@ -10,6 +10,15 @@ class Settings(BaseSettings):
     regos_api_token: str = ""
     admin_ids: str = ""  # comma-separated telegram IDs
 
+    # REGOS integration (https://docs.regos.uz/ru/api)
+    # Endpoint: https://integration.regos.uz/gateway/out/{integration_key}/v1
+    regos_endpoint: str = ""
+    regos_connected_integration_id: str = ""  # webhook source verification
+    regos_customer_group_id: int = 1
+    regos_card_group_id: int = 1
+    regos_barcode_type_id: int = 1
+    regos_promo_id: int = 1
+
     def get_admin_ids(self) -> List[int]:
         if not self.admin_ids:
             return []

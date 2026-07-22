@@ -1,1 +1,1 @@
-worker: python -m app.bot.main
+worker: python -m app.run_all

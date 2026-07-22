@@ -49,18 +49,48 @@ async def show_balance(message: Message):
         await message.answer("Avval /start orqali ro'yxatdan o'ting.")
         return
 
-    balance = int(user.cashback_balance)
+    balance = int(user.cashback_balance or 0)
+
+    # REGOS dagi real karta balansini olishga harakat qilamiz
+    if user.regos_card_id:
+        try:
+            from app.integrations.regos.client import regos_client
+            regos_balance = await regos_client.get_balance(int(user.regos_card_id))
+            balance = int(regos_balance)
+        except Exception:
+            pass  # REGOS vaqtincha ishlamasa lokal balans ko'rsatiladi
+
     text = f"💰 Cashback balansingiz: {balance:,} so'm".replace(",", " ")
     await message.answer(text, reply_markup=main_menu_keyboard())
 
 
 @router.message(F.text == "📜 Xaridlar tarixi")
 async def show_history(message: Message):
-    text = (
-        "📜 Xaridlar tarixi hozircha bo'sh.\n\n"
-        "REGOS integratsiyasidan keyin bu yerda tranzaksiyalar chiqadi."
-    )
-    await message.answer(text, reply_markup=main_menu_keyboard())
+    user = await UserService.get_by_telegram_id(message.from_user.id)
+
+    if not user:
+        await message.answer("Avval /start orqali ro'yxatdan o'ting.")
+        return
+
+    from app.services.user_service import UserService as US
+    transactions = await US.get_transactions(user.id, limit=10)
+
+    if not transactions:
+        await message.answer(
+            "📜 Xaridlar tarixi hozircha bo'sh.\n\n"
+            "Do'konda shtrix-kodingizni ko'rsatib xarid qilganingizda bu yerda ko'rinadi.",
+            reply_markup=main_menu_keyboard(),
+        )
+        return
+
+    lines = ["📜 So'nggi xaridlaringiz:\n"]
+    for tx in transactions:
+        amount_str = f"{int(tx.purchase_amount):,}".replace(",", " ")
+        cb_str = f"{int(tx.cashback_amount):,}".replace(",", " ")
+        date_str = tx.created_at.strftime("%d.%m.%Y")
+        lines.append(f"🧾 {date_str} — {amount_str} so'm → +{cb_str} so'm cashback")
+
+    await message.answer("\n".join(lines), reply_markup=main_menu_keyboard())
 
 
 @router.message(F.text == "ℹ️ Cashback qoidalari")

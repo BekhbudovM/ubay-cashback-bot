@@ -6,6 +6,7 @@ from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarku
 
 from app.bot.keyboards.common import menu_for_user, phone_keyboard
 from app.core.config import settings
+from app.services.regos_sync import ensure_regos_card
 from app.services.user_service import UserService
 from app.utils.barcode import generate_barcode_image
 
@@ -22,6 +23,7 @@ async def start_handler(message: Message, state: FSMContext):
     existing_user = await UserService.get_by_telegram_id(message.from_user.id)
 
     if existing_user:
+        await ensure_regos_card(existing_user)
         text = (
             f"Assalomu alaykum, {existing_user.full_name}!\n\n"
             "Siz UBAY cashback tizimida ro'yxatdan o'tgansiz."
@@ -76,6 +78,9 @@ async def name_handler(message: Message, state: FSMContext):
         phone=phone,
         full_name=full_name,
     )
+
+    # REGOS da mijoz + karta ochish (xato bo'lsa ro'yxatdan o'tish davom etadi)
+    await ensure_regos_card(user)
 
     await state.clear()
 
