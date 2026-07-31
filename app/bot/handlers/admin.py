@@ -1,10 +1,12 @@
 import asyncio
+import logging
 
 from aiogram import Bot, F, Router
 from aiogram.filters import Filter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from sqlalchemy import select
 
 from app.bot.keyboards.common import (
     admin_menu_keyboard,
@@ -14,8 +16,13 @@ from app.bot.keyboards.common import (
     promo_list_inline,
 )
 from app.core.config import settings
+from app.db.session import AsyncSessionLocal
+from app.models.user import User
 from app.services.product_service import MAX_PRODUCTS, ProductService, PromotionService
+from app.services.regos_sync import ensure_regos_card
 from app.services.user_service import UserService
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -414,3 +421,87 @@ async def broadcast_confirm(callback: CallbackQuery, state: FSMContext):
         f"❌ Yetkazilmadi: {failed} ta",
         reply_markup=admin_menu_keyboard(),
     )
+
+
+# ── REGOS Resync ──────────────────────────────────────────────────────────────
+
+@router.message(F.text == "🔄 REGOS Sinxronizatsiya", IsAdmin())
+async def regos_resync(message: Message):
+    await message.answer("⏳ REGOS sinxronizatsiya boshlanmoqda...")
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.regos_card_id == None)  # noqa: E711
+        )
+        users_without_card = result.scalars().all()
+
+    total = len(users_without_card)
+    if total == 0:
+        await message.answer(
+            "✅ Barcha foydalanuvchilar allaqachon REGOS da ro'yxatdan o'tgan!",
+            reply_markup=admin_menu_keyboard(),
+        )
+        return
+
+    await message.answer(f"🔄 {total} ta foydalanuvchi uchun REGOS karta yaratilmoqda...")
+
+    success = 0
+    failed = 0
+    failed_users = []
+
+    for user in users_without_card:
+        old_card_id = user.regos_card_id
+        try:
+            await ensure_regos_card(user)
+            if user.regos_card_id:
+                success += 1
+                logger.info("REGOS resync: card created for user %s (%s)", user.id, user.phone)
+            else:
+                failed += 1
+                failed_users.append(f"{user.full_name} ({user.phone})")
+                logger.warning("REGOS resync: failed for user %s (%s)", user.id, user.phone)
+        except Exception as e:
+            failed += 1
+            failed_users.append(f"{user.full_name} ({user.phone})")
+            logger.error("REGOS resync exception for user %s: %s", user.id, e)
+        await asyncio.sleep(0.3)
+
+    report = (
+        f"✅ REGOS sinxronizatsiya yakunlandi!\n\n"
+        f"✔️ Muvaffaqiyatli: {success} ta\n"
+        f"❌ Xato: {failed} ta"
+    )
+    if failed_users:
+        names = "\n".join(f"• {u}" for u in failed_users[:15])
+        report += f"\n\nXato bo'lgan foydalanuvchilar:\n{names}"
+        if len(failed_users) > 15:
+            report += f"\n...va yana {len(failed_users) - 15} ta"
+
+    await message.answer(report, reply_markup=admin_menu_keyboard())
+
+
+# ── Users list ────────────────────────────────────────────────────────────────
+
+@router.message(F.text == "👥 Foydalanuvchilar", IsAdmin())
+async def users_list(message: Message):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User))
+        all_users = result.scalars().all()
+
+    total = len(all_users)
+    synced = sum(1 for u in all_users if u.regos_card_id)
+    not_synced = total - synced
+
+    lines = []
+    for u in all_users[-20:]:
+        status = "✅" if u.regos_card_id else "❌"
+        balance = int(float(u.cashback_balance or 0))
+        lines.append(f"{status} {u.full_name} | {u.phone} | {balance:,} so'm".replace(",", " "))
+
+    text = (
+        f"👥 Foydalanuvchilar: {total} ta\n"
+        f"✅ REGOS sinx: {synced} ta\n"
+        f"❌ REGOS yo'q: {not_synced} ta\n\n"
+        f"Oxirgi 20 ta:\n" + "\n".join(lines)
+    )
+    await message.answer(text, reply_markup=admin_menu_keyboard())

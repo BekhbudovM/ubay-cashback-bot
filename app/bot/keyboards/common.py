@@ -39,6 +39,7 @@ def admin_menu_keyboard():
             [KeyboardButton(text="🔥 Aksiya qo'shish"), KeyboardButton(text="🗑 Aksiya o'chirish")],
             [KeyboardButton(text="📋 Yangiliklar ro'yxati"), KeyboardButton(text="📋 Aksiyalar ro'yxati")],
             [KeyboardButton(text="📢 Xabar yuborish")],
+            [KeyboardButton(text="🔄 REGOS Sinxronizatsiya"), KeyboardButton(text="👥 Foydalanuvchilar")],
             [KeyboardButton(text="🔙 Asosiy menyu")],
         ],
         resize_keyboard=True,
