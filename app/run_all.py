@@ -47,7 +47,8 @@ async def run_api():
 
 async def main():
     await create_tables()
-    await asyncio.gather(run_bot(), run_api())
+    from app.services.recovery import recovery_loop
+    await asyncio.gather(run_bot(), run_api(), recovery_loop())
 
 
 if __name__ == "__main__":

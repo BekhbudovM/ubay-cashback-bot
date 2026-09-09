@@ -98,5 +98,29 @@ class RegosClient:
             return result[0] if result else None
         return None
 
+    async def get_recent_cheques(self, start_date: int, end_date: int) -> list:
+        cheques = []
+        offset = 0
+        while True:
+            result = await self._post("doccheque/get", {
+                "start_date": start_date,
+                "end_date": end_date,
+                "limit": 100,
+                "offset": offset,
+            })
+            batch = result if isinstance(result, list) else []
+            cheques.extend(batch)
+            if len(batch) < 100:
+                break
+            offset += 100
+        return cheques
+
+    async def get_card_operations(self, card_id: int) -> list:
+        result = await self._post("retailcard/getoperations", {
+            "card_id": card_id,
+            "promo_id": settings.regos_promo_id,
+        })
+        return result if isinstance(result, list) else []
+
 
 regos_client = RegosClient()
