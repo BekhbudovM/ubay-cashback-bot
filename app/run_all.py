@@ -10,6 +10,7 @@ from aiogram import Bot, Dispatcher
 from app.api.main import app as fastapi_app
 from app.bot.handlers.admin import router as admin_router
 from app.bot.handlers.menu import router as menu_router
+from app.bot.handlers.sellers import router as sellers_router
 from app.bot.handlers.start import router as start_router
 from app.core.config import settings
 from app.db.base import Base
@@ -31,6 +32,7 @@ async def run_bot():
     bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
     dp.include_router(admin_router)
+    dp.include_router(sellers_router)
     dp.include_router(start_router)
     dp.include_router(menu_router)
     print("UBAY Cashback bot started...")
