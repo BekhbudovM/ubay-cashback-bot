@@ -115,6 +115,19 @@ class RegosClient:
             offset += 100
         return cheques
 
+    async def get_users(self) -> list:
+        """All REGOS users (employees). Sellers are users with a seller_barcode."""
+        users = []
+        offset = 0
+        while True:
+            result = await self._post("user/get", {"limit": 100, "offset": offset})
+            batch = result if isinstance(result, list) else []
+            users.extend(batch)
+            if len(batch) < 100:
+                break
+            offset += 100
+        return users
+
     async def get_card_operations(self, card_id: int) -> list:
         result = await self._post("retailcard/getoperations", {
             "card_id": card_id,
