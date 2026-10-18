@@ -31,8 +31,10 @@ async def main():
     dp.include_router(start_router)
     dp.include_router(menu_router)
 
+    from app.services.daily_report import daily_report_loop
+
     print("UBAY Cashback bot started...")
-    await dp.start_polling(bot)
+    await asyncio.gather(dp.start_polling(bot), daily_report_loop(bot))
 
 
 if __name__ == "__main__":

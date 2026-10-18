@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     regos_barcode_type_id: int = 1
     regos_promo_id: int = 1
 
+    # Evening seller sales report to admins, Tashkent time "HH:MM" ("" disables it)
+    seller_report_time: str = "22:10"
+
     def get_admin_ids(self) -> List[int]:
         if not self.admin_ids:
             return []

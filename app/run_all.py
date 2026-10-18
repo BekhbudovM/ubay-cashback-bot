@@ -28,8 +28,7 @@ async def create_tables():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def run_bot():
-    bot = Bot(token=settings.bot_token)
+async def run_bot(bot: Bot):
     dp = Dispatcher()
     dp.include_router(admin_router)
     dp.include_router(sellers_router)
@@ -49,8 +48,10 @@ async def run_api():
 
 async def main():
     await create_tables()
+    from app.services.daily_report import daily_report_loop
     from app.services.recovery import recovery_loop
-    await asyncio.gather(run_bot(), run_api(), recovery_loop())
+    bot = Bot(token=settings.bot_token)
+    await asyncio.gather(run_bot(bot), run_api(), recovery_loop(), daily_report_loop(bot))
 
 
 if __name__ == "__main__":
